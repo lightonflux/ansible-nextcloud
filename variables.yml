@@ -1,0 +1,14 @@
+---
+# Variable configuration.
+  - name: Include OS-specific variables (Debian).
+    include_vars: "{{ ansible_distribution }}-{{ ansible_distribution_version.split('.')[0] }}.yml"
+    when: ansible_os_family == 'Debian'
+
+  - name: Include OS-specific variables (Ubuntu).
+    include_vars: "{{ ansible_distribution }}-{{ ansible_distribution_version.split('.')[0] }}.yml"
+    when: ansible_os_family == 'Ubuntu'
+  
+  - name: Define php_packages.
+    set_fact:
+    php_packages: "{{ __php_packages | list }}"
+    when: php_packages is not defined

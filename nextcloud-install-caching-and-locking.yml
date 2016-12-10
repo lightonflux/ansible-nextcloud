@@ -1,0 +1,30 @@
+---
+# Install nextcloud caching and locking with redis
+- hosts: nextcloud
+  tasks:
+
+  - name: Install redis for caching and locking
+    apt: name={{item}} state=installed update_cache=yes state=latest
+    with_items:
+      - redis-server
+      - php-redis # Debian8 php5-redis
+
+  - name: enable caching
+    blockinfile:
+      dest: /var/www/nextcloud/config/config.php
+      insertafter: "  'installed' => true,"
+      marker: "/* {mark} Block inserted with Ansible */"
+      block: |
+            'loglevel' => 1,
+            'filelocking.enabled' => 'true',
+            'memcache.locking' => '\\OC\\Memcache\\Redis',
+            'memcache.local' => '\\OC\\Memcache\\Redis',
+            'redis' => 
+            array ( 
+              'host' => 'localhost',
+              'port' => 6379,
+              'timeout' => 0,
+            ),
+
+  - name: Restart Apache
+    command: systemctl restart apache2

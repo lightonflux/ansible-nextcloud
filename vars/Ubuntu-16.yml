@@ -1,0 +1,15 @@
+---
+__php_packages:
+  - libapache2-mod-php
+  - php-gd
+  - php-fpm
+  - php
+  - php-xml
+  - php-json
+  - php-mysql
+  - php-curl
+  - php-intl
+  - php-mcrypt
+  - php-imagick
+  - php-zip
+  - php-mbstring

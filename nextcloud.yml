@@ -1,0 +1,82 @@
+---
+# Install nextcloud
+- hosts: nextcloud
+  tasks:
+  - name: Include php package names by distro
+    include_vars: "vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml"
+
+  - name: Define php_packages
+    set_fact:
+      php_packages: "{{ __php_packages | list }}"
+    when: php_packages is not defined  
+
+  - name: Install Nextcloud dependencies (http & db)
+    apt: name={{item}} state=installed update_cache=yes state=latest
+    with_items:
+      - apache2
+      - mysql-server # mariadb-server # can be used just as well without any issue
+
+  - name: Install needed php packages
+    apt: name={{ item }} state=installed update_cache=yes state=latest
+    with_items: "{{ php_packages }}"
+
+  - name: Creates nextcloud directory
+    file: path=/var/www/nextcloud state=directory
+
+
+  - name: Download and unpack Nextcloud archive
+    unarchive:
+      src: "https://download.nextcloud.com/server/releases/nextcloud-10.0.1.tar.bz2"
+      dest: /var/www/
+      remote_src: yes
+      owner: www-data
+      group: www-data
+      mode: 0744
+
+  - name: Create data directory
+    file: 
+      path: /data
+      state: directory
+      owner: www-data
+      group: www-data
+
+  - name: Deploy nextcloud apache conf
+    copy:
+      src: files/nextcloud.conf
+      dest: /etc/apache2/sites-available/nextcloud.conf
+
+
+  - name: Enabled Apache Modules
+    apache2_module: name={{item}} state=present
+    with_items:
+      - rewrite
+      - headers
+      - env
+      - dir
+      - mime
+    notify:
+      - restart apache2
+
+  - name: Display debian.cnf
+    command: "/bin/cat /etc/mysql/debian.cnf"
+    register: cat
+  - debug: var=cat.stdout_lines
+
+  - name: Change apache's document root
+    lineinfile:
+      dest: /etc/apache2/sites-available/000-default.conf
+      regexp: 'DocumentRoot /var/www/html$'
+      line: '	DocumentRoot /var/www/nextcloud'
+
+  - name: Enable nextcloud apache config by symlinking
+    file: 
+      src: /etc/apache2/sites-available/nextcloud.conf
+      dest: /etc/apache2/sites-enabled/nextcloud.conf
+      state: link 
+    notify: 
+      - restart apache2
+
+  handlers:
+      - name: restart apache2
+        service: name=apache2 state=restarted
+
